@@ -11,7 +11,7 @@ class Diablo(Robot):
     def __init__(
         self,
         prim_path: str,
-        name: Optional[str] = "franka",
+        name: Optional[str] = "diablo",
         usd_path: Optional[str] = None,
         translation: Optional[torch.tensor] = None,
         orientation: Optional[torch.tensor] = None,
