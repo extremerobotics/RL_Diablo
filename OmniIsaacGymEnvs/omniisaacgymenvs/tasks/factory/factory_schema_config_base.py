@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2022, NVIDIA Corporation
+# Copyright (c) 2018-2023, NVIDIA Corporation
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,25 +26,42 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+"""Factory: schema for base class configuration.
 
-def initialize_demo(config, env, init_sim=True):
-    from omniisaacgymenvs.demos.anymal_terrain import AnymalTerrainDemo
-    from omniisaacgymenvs.demos.exbot_demo import ExbotDemo
-    
-    # Mappings from strings to environments
-    task_map = {
-        "AnymalTerrain": AnymalTerrainDemo,
-        "ExbotTest": ExbotDemo
-    }
+Used by Hydra. Defines template for base class YAML file.
+"""
 
-    from omniisaacgymenvs.utils.config_utils.sim_config import SimConfig
-    sim_config = SimConfig(config)
 
-    cfg = sim_config.config
-    task = task_map[cfg["task_name"]](
-        name=cfg["task_name"], sim_config=sim_config, env=env
-    )
+from dataclasses import dataclass
 
-    env.set_task(task=task, sim_params=sim_config.get_physics_params(), backend="torch", init_sim=init_sim)
 
-    return task
+@dataclass
+class Mode:
+    export_scene: bool  # export scene to USD
+    export_states: bool  # export states to NPY
+
+
+@dataclass
+class Sim:
+    dt: float  # timestep size (default = 1.0 / 60.0)
+    num_substeps: int  # number of substeps (default = 2)
+    num_pos_iters: int  # number of position iterations for PhysX TGS solver (default = 4)
+    num_vel_iters: int  # number of velocity iterations for PhysX TGS solver (default = 1)
+    gravity_mag: float  # magnitude of gravitational acceleration
+    add_damping: bool  # add damping to stabilize gripper-object interactions
+
+
+@dataclass
+class Env:
+    env_spacing: float  # lateral offset between envs
+    franka_depth: float  # depth offset of Franka base relative to env origin
+    table_height: float  # height of table
+    franka_friction: float  # coefficient of friction associated with Franka
+    table_friction: float  # coefficient of friction associated with table
+
+
+@dataclass
+class FactorySchemaConfigBase:
+    mode: Mode
+    sim: Sim
+    env: Env

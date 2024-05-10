@@ -27,24 +27,31 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-def initialize_demo(config, env, init_sim=True):
-    from omniisaacgymenvs.demos.anymal_terrain import AnymalTerrainDemo
-    from omniisaacgymenvs.demos.exbot_demo import ExbotDemo
-    
-    # Mappings from strings to environments
-    task_map = {
-        "AnymalTerrain": AnymalTerrainDemo,
-        "ExbotTest": ExbotDemo
-    }
+from typing import Optional
 
-    from omniisaacgymenvs.utils.config_utils.sim_config import SimConfig
-    sim_config = SimConfig(config)
+from omni.isaac.core.articulations import ArticulationView
+from omni.isaac.core.prims import RigidPrimView
 
-    cfg = sim_config.config
-    task = task_map[cfg["task_name"]](
-        name=cfg["task_name"], sim_config=sim_config, env=env
-    )
 
-    env.set_task(task=task, sim_params=sim_config.get_physics_params(), backend="torch", init_sim=init_sim)
+class IngenuityView(ArticulationView):
+    def __init__(self, prim_paths_expr: str, name: Optional[str] = "IngenuityView") -> None:
+        """[summary]"""
 
-    return task
+        super().__init__(prim_paths_expr=prim_paths_expr, name=name, reset_xform_properties=False)
+
+        self.physics_rotors = [
+            RigidPrimView(
+                prim_paths_expr=f"/World/envs/.*/Ingenuity/rotor_physics_{i}",
+                name=f"physics_rotor_{i}_view",
+                reset_xform_properties=False,
+            )
+            for i in range(2)
+        ]
+        self.visual_rotors = [
+            RigidPrimView(
+                prim_paths_expr=f"/World/envs/.*/Ingenuity/rotor_visual_{i}",
+                name=f"visual_rotor_{i}_view",
+                reset_xform_properties=False,
+            )
+            for i in range(2)
+        ]

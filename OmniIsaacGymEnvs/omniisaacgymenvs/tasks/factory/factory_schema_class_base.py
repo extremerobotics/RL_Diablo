@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2022, NVIDIA Corporation
+# Copyright (c) 2018-2023, NVIDIA Corporation
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,25 +26,53 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+"""Factory: abstract base class for base class.
 
-def initialize_demo(config, env, init_sim=True):
-    from omniisaacgymenvs.demos.anymal_terrain import AnymalTerrainDemo
-    from omniisaacgymenvs.demos.exbot_demo import ExbotDemo
-    
-    # Mappings from strings to environments
-    task_map = {
-        "AnymalTerrain": AnymalTerrainDemo,
-        "ExbotTest": ExbotDemo
-    }
+Inherits ABC class. Inherited by base class. Defines template for base class.
+"""
 
-    from omniisaacgymenvs.utils.config_utils.sim_config import SimConfig
-    sim_config = SimConfig(config)
 
-    cfg = sim_config.config
-    task = task_map[cfg["task_name"]](
-        name=cfg["task_name"], sim_config=sim_config, env=env
-    )
+from abc import ABC, abstractmethod
 
-    env.set_task(task=task, sim_params=sim_config.get_physics_params(), backend="torch", init_sim=init_sim)
 
-    return task
+class FactoryABCBase(ABC):
+    @abstractmethod
+    def __init__(self):
+        """Initialize instance variables. Initialize VecTask superclass."""
+        pass
+
+    @abstractmethod
+    def _get_base_yaml_params(self):
+        """Initialize instance variables from YAML files."""
+        pass
+
+    @abstractmethod
+    def import_franka_assets(self):
+        """Set Franka and table asset options. Import assets."""
+        pass
+
+    @abstractmethod
+    def refresh_base_tensors(self):
+        """Refresh tensors."""
+        # NOTE: Tensor refresh functions should be called once per step, before setters.
+        pass
+
+    @abstractmethod
+    def parse_controller_spec(self):
+        """Parse controller specification into lower-level controller configuration."""
+        pass
+
+    @abstractmethod
+    def generate_ctrl_signals(self):
+        """Get Jacobian. Set Franka DOF position targets or DOF torques."""
+        pass
+
+    @abstractmethod
+    def enable_gravity(self):
+        """Enable gravity."""
+        pass
+
+    @abstractmethod
+    def disable_gravity(self):
+        """Disable gravity."""
+        pass

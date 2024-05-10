@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2022, NVIDIA Corporation
+# Copyright (c) 2018-2023, NVIDIA Corporation
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,25 +26,26 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+"""Factory: schema for environment class configurations.
 
-def initialize_demo(config, env, init_sim=True):
-    from omniisaacgymenvs.demos.anymal_terrain import AnymalTerrainDemo
-    from omniisaacgymenvs.demos.exbot_demo import ExbotDemo
-    
-    # Mappings from strings to environments
-    task_map = {
-        "AnymalTerrain": AnymalTerrainDemo,
-        "ExbotTest": ExbotDemo
-    }
+Used by Hydra. Defines template for environment class YAML files.
+"""
 
-    from omniisaacgymenvs.utils.config_utils.sim_config import SimConfig
-    sim_config = SimConfig(config)
 
-    cfg = sim_config.config
-    task = task_map[cfg["task_name"]](
-        name=cfg["task_name"], sim_config=sim_config, env=env
-    )
+from dataclasses import dataclass
 
-    env.set_task(task=task, sim_params=sim_config.get_physics_params(), backend="torch", init_sim=init_sim)
 
-    return task
+@dataclass
+class Sim:
+    disable_franka_collisions: bool  # disable collisions between Franka and objects
+
+
+@dataclass
+class Env:
+    env_name: str  # name of scene
+
+
+@dataclass
+class FactorySchemaConfigEnv:
+    sim: Sim
+    env: Env

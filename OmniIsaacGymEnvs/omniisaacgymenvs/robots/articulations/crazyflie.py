@@ -27,24 +27,38 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-def initialize_demo(config, env, init_sim=True):
-    from omniisaacgymenvs.demos.anymal_terrain import AnymalTerrainDemo
-    from omniisaacgymenvs.demos.exbot_demo import ExbotDemo
-    
-    # Mappings from strings to environments
-    task_map = {
-        "AnymalTerrain": AnymalTerrainDemo,
-        "ExbotTest": ExbotDemo
-    }
+from typing import Optional
 
-    from omniisaacgymenvs.utils.config_utils.sim_config import SimConfig
-    sim_config = SimConfig(config)
+import carb
+import numpy as np
+import torch
+from omni.isaac.core.robots.robot import Robot
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.utils.stage import add_reference_to_stage
 
-    cfg = sim_config.config
-    task = task_map[cfg["task_name"]](
-        name=cfg["task_name"], sim_config=sim_config, env=env
-    )
 
-    env.set_task(task=task, sim_params=sim_config.get_physics_params(), backend="torch", init_sim=init_sim)
+class Crazyflie(Robot):
+    def __init__(
+        self,
+        prim_path: str,
+        name: Optional[str] = "crazyflie",
+        usd_path: Optional[str] = None,
+        translation: Optional[np.ndarray] = None,
+        orientation: Optional[np.ndarray] = None,
+        scale: Optional[np.array] = None,
+    ) -> None:
+        """[summary]"""
 
-    return task
+        self._usd_path = usd_path
+        self._name = name
+
+        if self._usd_path is None:
+            assets_root_path = get_assets_root_path()
+            if assets_root_path is None:
+                carb.log_error("Could not find Isaac Sim assets folder")
+            self._usd_path = assets_root_path + "/Isaac/Robots/Crazyflie/cf2x.usd"
+
+        add_reference_to_stage(self._usd_path, prim_path)
+        scale = torch.tensor([5, 5, 5])
+
+        super().__init__(prim_path=prim_path, name=name, translation=translation, orientation=orientation, scale=scale)
