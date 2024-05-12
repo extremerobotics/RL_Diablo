@@ -62,7 +62,7 @@ env:
     jointAccRewardScale: -0.03
     actionRateRewardScale: -0.05
     cosmeticRewardScale: 0.0
-    orientationRewardScale: 1
+    orientationRewardScale: 10.0
 
     # normalization
     linearVelocityScale: 0.1

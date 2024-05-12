@@ -210,12 +210,15 @@ class ExbotTask(RLTask):
         )
         self._exbots.set_velocities(root_vel, indices)
 
-        self.commands_x[env_ids] = torch_rand_float(
-            self.command_x_range[0], self.command_x_range[1], (num_resets, 1), device=self._device
+        self.commands[env_ids, 0] = torch_rand_float(
+            self.command_x_range[0], self.command_x_range[1], (len(env_ids), 1), device=self.device
         ).squeeze()
-        self.commands_yaw[env_ids] = torch_rand_float(
-            self.command_yaw_range[0], self.command_yaw_range[1], (num_resets, 1), device=self._device
+        self.commands[env_ids, 1] = torch_rand_float(
+            self.command_yaw_range[0], self.command_yaw_range[1], (len(env_ids), 1), device=self.device
         ).squeeze()
+        self.commands[env_ids] *= (torch.norm(self.commands[env_ids, :1], dim=1) > 0.25).unsqueeze(
+            1
+        )  # set small commands to zero
 
         # bookkeeping
         self.reset_buf[env_ids] = 0
@@ -236,8 +239,6 @@ class ExbotTask(RLTask):
         # self.exbot_dof_upper_limits = dof_limits[0, :, 1].to(device=self._device)
 
         self.commands = torch.zeros(self._num_envs, 2, dtype=torch.float, device=self._device, requires_grad=False)
-        self.commands_x = self.commands.view(self._num_envs, 2)[..., 0]
-        self.commands_yaw = self.commands.view(self._num_envs, 2)[..., 1]
 
         # initialize some data used later on
         self.extras = {}
@@ -290,9 +291,11 @@ class ExbotTask(RLTask):
         rew_cosmetic = (
             torch.sum(torch.abs(dof_pos[:, 0:4] - self.default_dof_pos[:, 0:4]), dim=1) * self.rew_scales["cosmetic"]
         )
+
         rew_orientation = torch.exp( 
-            - torch.sum( torch.square(projected_gravity[:, :] - self.gravity_vec) , dim=1)\
-             / 0.25) * self.rew_scales["orientation"]
+            - torch.sum( torch.square(projected_gravity[:, :] - self.gravity_vec) , dim=1)/0.25 \
+            ) * self.rew_scales["orientation"]
+
 
         total_reward = rew_lin_vel_x + rew_lin_vel_y + rew_lin_vel_z\
             + rew_ang_vel_x + rew_ang_vel_y + rew_ang_vel_z \
