@@ -98,8 +98,8 @@ class ExbotTask(RLTask):
         self.dt = 1 / 60
         self.max_episode_length_s = self._task_cfg["env"]["learn"]["episodeLength_s"]
         self.max_episode_length = int(self.max_episode_length_s / self.dt + 0.5)
-        self.Kp = self._task_cfg["env"]["control"]["stiffness"]
-        self.Kd = self._task_cfg["env"]["control"]["damping"]
+        # self.Kp = self._task_cfg["env"]["control"]["stiffness"]
+        # self.Kd = self._task_cfg["env"]["control"]["damping"]
 
         for key in self.rew_scales.keys():
             self.rew_scales[key] *= self.dt
@@ -108,6 +108,19 @@ class ExbotTask(RLTask):
         self._env_spacing = self._task_cfg["env"]["envSpacing"]
         self._exbot_positions = torch.tensor([0.0, 0.0, 0.001])
 
+
+    def _get_noise_scale_vec(self, cfg):
+        noise_vec = torch.zeros_like(self.obs_buf[0])
+        self.add_noise = self._task_cfg["env"]["learn"]["addNoise"]
+        noise_level = self._task_cfg["env"]["learn"]["noiseLevel"]
+        noise_vec[:3] = self._task_cfg["env"]["learn"]["linearVelocityNoise"] * noise_level * self.lin_vel_scale
+        noise_vec[3:6] = self._task_cfg["env"]["learn"]["angularVelocityNoise"] * noise_level * self.ang_vel_scale
+        noise_vec[6:9] = self._task_cfg["env"]["learn"]["gravityNoise"] * noise_level
+        noise_vec[9:11] = 0.0  # commands
+        # noise_vec[12:24] = self._task_cfg["env"]["learn"]["dofPositionNoise"] * noise_level * self.dof_pos_scale
+        noise_vec[11:13] = self._task_cfg["env"]["learn"]["dofVelocityNoise"] * noise_level * self.dof_vel_scale
+        noise_vec[13:15] = 0.0  # previous actions
+        return noise_vec
 
 
     def set_up_scene(self, scene) -> None:
@@ -169,7 +182,17 @@ class ExbotTask(RLTask):
             ),
             dim=-1,
         )
+
+
+        # print("obs = ", obs)
+
+        print("dof_vel = ", dof_vel)
+        print("actions = ", self.actions* self.action_scale)
+
         self.obs_buf[:] = obs
+
+        if self.add_noise:
+            self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
 
         # print("obs = ", obs)
 
@@ -185,7 +208,9 @@ class ExbotTask(RLTask):
             self.reset_idx(reset_env_ids)
 
         self.actions[:] = actions.clone().to(self._device)
-        self.current_targets[:] = self.action_scale * self.actions[:, 0:2]
+        # self.current_targets[:] = self.action_scale * self.actions[:, 0:2]
+        self.current_targets[:] = self.action_scale * self.actions[:, 0] * torch.tensor([1.0, 1.0], device=self._device).repeat((self._num_envs, 1)) + \
+            self.action_scale * self.actions[:, 1] * torch.tensor([1.0, -1.0], device=self._device).repeat((self._num_envs, 1))
         self._exbots.set_joint_velocity_targets(self.current_targets)
         
 
@@ -241,6 +266,7 @@ class ExbotTask(RLTask):
         self.commands = torch.zeros(self._num_envs, 2, dtype=torch.float, device=self._device, requires_grad=False)
 
         # initialize some data used later on
+        self.noise_scale_vec = self._get_noise_scale_vec(self._task_cfg)
         self.extras = {}
         self.gravity_vec = torch.tensor([0.0, 0.0, -1.0], device=self._device).repeat((self._num_envs, 1))
         self.actions = torch.zeros(
@@ -275,14 +301,17 @@ class ExbotTask(RLTask):
 
         # velocity tracking reward
         lin_vel_error = torch.square(self.commands[:, 0] - base_lin_vel[:, 0])
-        ang_vel_error = torch.square(self.commands[:, 1] - base_ang_vel[:, 2])
+        # ang_vel_error = torch.square(self.commands[:, 1] - base_ang_vel[:, 2])
         rew_lin_vel_x = torch.exp(-lin_vel_error / 0.25) * self.rew_scales["lin_vel_x"]
-        rew_ang_vel_z = torch.exp(-ang_vel_error / 0.25) * self.rew_scales["ang_vel_z"]
+        # rew_ang_vel_z = torch.exp(-ang_vel_error / 0.25) * self.rew_scales["ang_vel_z"]
         
         rew_lin_vel_y = torch.square(base_lin_vel[:, 1]) * self.rew_scales["lin_vel_y"]
         rew_lin_vel_z = torch.square(base_lin_vel[:, 2]) * self.rew_scales["lin_vel_z"]
         rew_ang_vel_x = torch.square(base_ang_vel[:, 0]) * self.rew_scales["ang_vel_x"]
         rew_ang_vel_y = torch.square(base_ang_vel[:, 1]) * self.rew_scales["ang_vel_y"]
+
+        rew_ang_vel_z = torch.square(base_ang_vel[:, 2]) * self.rew_scales["ang_vel_z"]
+
         rew_joint_acc = \
             torch.sum(torch.square(self.last_dof_vel - dof_vel), dim=1) * self.rew_scales["joint_acc"]
         rew_action_rate = (

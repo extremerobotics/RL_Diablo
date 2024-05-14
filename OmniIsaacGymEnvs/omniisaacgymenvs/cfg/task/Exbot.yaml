@@ -23,14 +23,14 @@ env:
     vAngular: [0.0, 0.0, 0.0]  # x,y,z [rad/s]
   
   randomCommandVelocityRanges:
-    linear_x: [-2., 2.] # min max [m/s]
-    yaw: [-1., 1.]          # min max [rad/s]
+    linear_x: [-7., 7.] # min max [m/s]
+    yaw: [-0., 0.]      # min max [rad/s]
   
   control:
     # PD Drive parameters:
-    stiffness: 85.0  # [N*m/rad]
-    damping: 2.0     # [N*m*s/rad]
-    actionScale: 100
+    # stiffness: 85.0  # [N*m/rad]
+    # damping: 2.0     # [N*m*s/rad]
+    actionScale: 20   # max_speed = 10 m/s --> action scale = max_speed(10) [m/s] / wheel_radius(0.5) [m] = 20 rad/s
   
   # defaultJointAngles:  # = target angles when action = 0.0
   #   LF_HAA: 0.03    # [rad]
@@ -57,21 +57,30 @@ env:
       #angular velocity
     angularVelocityXRewardScale: -1.0
     angularVelocityYRewardScale: -1.0
-    angularVelocityZRewardScale: 1.0
+    angularVelocityZRewardScale: -1.0
       #joint position
     jointAccRewardScale: -0.03
     actionRateRewardScale: -0.05
     cosmeticRewardScale: 0.0
-    orientationRewardScale: 10.0
+    orientationRewardScale: 0.5
 
     # normalization
-    linearVelocityScale: 0.1
-    angularVelocityScale: 0.01
+    linearVelocityScale: 0.1    # max_speed = 10 m/s clip between -1 and 1
+    angularVelocityScale: 0.08  # max_angular_speed = 12.5 rad/s clip between -1 and 1
     dofPositionScale: 1.0
-    dofVelocityScale: 0.005
+    dofVelocityScale: 0.04
+
+    # noise 
+    addNoise: True
+    noiseLevel: 0.1 # scales other values
+    # dofPositionNoise: 0.01
+    dofVelocityNoise: 1.5
+    linearVelocityNoise: 0.1
+    angularVelocityNoise: 0.2
+    gravityNoise: 0.05
 
     # episode length in seconds
-    episodeLength_s: 20
+    episodeLength_s: 40
 
 
 sim:
