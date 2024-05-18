@@ -140,7 +140,7 @@ class ExbotDemo(ExbotTask):
         base_pos = self.base_pos[self._selected_id, :].clone()
         base_quat = self.base_quat[self._selected_id, :].clone()
 
-        camera_local_transform = torch.tensor([-1.8, 0.0, 0.6], device=self.device)
+        camera_local_transform = torch.tensor([-3.0, 3.0, 1.0], device=self.device)
         camera_pos = quat_apply(base_quat, camera_local_transform) + base_pos
 
         camera_state = ViewportCameraState(self.camera_path, self.view_port)

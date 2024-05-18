@@ -21,17 +21,26 @@ env:
     rot: [0.0, 0.0, 0.0, 1.0] # x,y,z,w [quat]
     vLinear: [0.0, 0.0, 0.0]  # x,y,z [m/s]
     vAngular: [0.0, 0.0, 0.0]  # x,y,z [rad/s]
+    vxLinearRandom: [-10, 10]
+    vzAngularRandom: [-1, 1]
   
   randomCommandVelocityRanges:
     linear_x: [-7., 7.] # min max [m/s]
-    yaw: [-0., 0.]      # min max [rad/s]
+    yaw: [-0.2, 0.2]      # min max [rad/s]
   
   control:
-    # PD Drive parameters:
-    # stiffness: 85.0  # [N*m/rad]
-    # damping: 2.0     # [N*m*s/rad]
+    #different action space : 'normal', 'differential', 'variation'
+    actionSpaceMode: 'differential'
     actionScale: 20   # max_speed = 10 m/s --> action scale = max_speed(10) [m/s] / wheel_radius(0.5) [m] = 20 rad/s
-  
+    
+    
+    # actionSpaceMode: 'variation'
+    # wheelMaxAngularVelocity: 20.0   # [r/s]
+    # actionScale: 2
+
+
+
+
   # defaultJointAngles:  # = target angles when action = 0.0
   #   LF_HAA: 0.03    # [rad]
   #   LH_HAA: 0.03    # [rad]
@@ -51,13 +60,13 @@ env:
   learn:
     # rewards
       #linear velocity
-    linearVelocityXRewardScale: 1.0
+    linearVelocityXRewardScale: 5.0
     linearVelocityYRewardScale: -0.1
     linearVelocityZRewardScale: -0.1
       #angular velocity
     angularVelocityXRewardScale: -1.0
     angularVelocityYRewardScale: -1.0
-    angularVelocityZRewardScale: -1.0
+    angularVelocityZRewardScale: 3.0
       #joint position
     jointAccRewardScale: -0.03
     actionRateRewardScale: -0.05
@@ -72,7 +81,7 @@ env:
 
     # noise 
     addNoise: True
-    noiseLevel: 0.1 # scales other values
+    noiseLevel: 1 # scales other values
     # dofPositionNoise: 0.01
     dofVelocityNoise: 1.5
     linearVelocityNoise: 0.1
@@ -80,7 +89,7 @@ env:
     gravityNoise: 0.05
 
     # episode length in seconds
-    episodeLength_s: 40
+    episodeLength_s: 20
 
 
 sim:

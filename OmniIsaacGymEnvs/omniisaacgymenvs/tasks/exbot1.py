@@ -89,7 +89,16 @@ class ExbotTask(RLTask):
         v_ang = self._task_cfg["env"]["baseInitState"]["vAngular"]
         state = pos + rot + v_lin + v_ang
 
+        self.vx_lin_range = self._task_cfg["env"]["baseInitState"]["vxLinearRandom"]
+        self.vz_ang_range = self._task_cfg["env"]["baseInitState"]["vzAngularRandom"]
+
         self.base_init_state = state
+
+        # control
+        self.action_space_mode = self._task_cfg["env"]["control"]["actionSpaceMode"]
+
+        if self.action_space_mode == "variation":
+            self.wheel_max_angular_velocity = self._task_cfg["env"]["control"]["wheelMaxAngularVelocity"]
 
         # default joint positions
         # self.named_default_joint_angles = self._task_cfg["env"]["defaultJointAngles"]
@@ -185,16 +194,13 @@ class ExbotTask(RLTask):
 
 
         # print("obs = ", obs)
-
-        print("dof_vel = ", dof_vel)
-        print("actions = ", self.actions* self.action_scale)
+        # print("dof_vel = ", dof_vel)
+        # print("actions = ", self.actions* self.action_scale)
 
         self.obs_buf[:] = obs
 
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
-
-        # print("obs = ", obs)
 
         observations = {self._exbots.name: {"obs_buf": self.obs_buf}}
         return observations
@@ -208,22 +214,37 @@ class ExbotTask(RLTask):
             self.reset_idx(reset_env_ids)
 
         self.actions[:] = actions.clone().to(self._device)
-        # self.current_targets[:] = self.action_scale * self.actions[:, 0:2]
-        self.current_targets[:] = self.action_scale * self.actions[:, 0] * torch.tensor([1.0, 1.0], device=self._device).repeat((self._num_envs, 1)) + \
-            self.action_scale * self.actions[:, 1] * torch.tensor([1.0, -1.0], device=self._device).repeat((self._num_envs, 1))
+
+        if self.action_space_mode == "torque":
+            self._exbots.set_joint_torque_targets(self.actions) * self.action_scale
+            return
+        elif self.action_space_mode == "normal":
+            self.current_targets[:] = self.action_scale * self.actions[:, 0:2]
+        elif self.action_space_mode == "differential":
+            self.current_targets[:] = \
+                self.action_scale * torch.mul( self.actions[:, 0].view(self._num_envs, 1),\
+                                            torch.tensor([1.0, 1.0], device=self._device).repeat((self._num_envs, 1)) )+ \
+                self.action_scale * torch.mul(self.actions[:, 1].view(self._num_envs, 1),\
+                                            torch.tensor([1.0, -1.0], device=self._device).repeat((self._num_envs, 1)) )
+        elif self.action_space_mode == "variation":
+            self.current_targets[:] = torch.clamp(torch.mul(self.actions * self.action_scale, self.current_targets),\
+                                                  -self.wheel_max_angular_velocity, self.wheel_max_angular_velocity )
+            
         self._exbots.set_joint_velocity_targets(self.current_targets)
         
 
     def reset_idx(self, env_ids):
         num_resets = len(env_ids)
         # randomize DOF velocities
-        velocities = torch_rand_float(-0.1, 0.1, (num_resets, self._exbots.num_dof), device=self._device)
         dof_pos = torch.zeros((num_resets, self._exbots.num_dof), device=self._device)
-        dof_vel = velocities
+        dof_vel = torch_rand_float(-0.1, 0.1, (num_resets, self._exbots.num_dof), device=self._device)
 
         self.current_targets[env_ids] = dof_vel[:]
 
         root_vel = torch.zeros((num_resets, 6), device=self._device)
+
+        root_vel[:, 0] = torch_rand_float(self.vx_lin_range[0], self.vx_lin_range[1], (1, num_resets), device=self._device)
+        root_vel[:, 5] = torch_rand_float(self.vz_ang_range[0], self.vz_ang_range[1], (1, num_resets), device=self._device)
 
         # apply resets
         indices = env_ids.to(dtype=torch.int32)
@@ -301,16 +322,19 @@ class ExbotTask(RLTask):
 
         # velocity tracking reward
         lin_vel_error = torch.square(self.commands[:, 0] - base_lin_vel[:, 0])
-        # ang_vel_error = torch.square(self.commands[:, 1] - base_ang_vel[:, 2])
         rew_lin_vel_x = torch.exp(-lin_vel_error / 0.25) * self.rew_scales["lin_vel_x"]
-        # rew_ang_vel_z = torch.exp(-ang_vel_error / 0.25) * self.rew_scales["ang_vel_z"]
-        
+
+       
         rew_lin_vel_y = torch.square(base_lin_vel[:, 1]) * self.rew_scales["lin_vel_y"]
         rew_lin_vel_z = torch.square(base_lin_vel[:, 2]) * self.rew_scales["lin_vel_z"]
         rew_ang_vel_x = torch.square(base_ang_vel[:, 0]) * self.rew_scales["ang_vel_x"]
         rew_ang_vel_y = torch.square(base_ang_vel[:, 1]) * self.rew_scales["ang_vel_y"]
+        if self.rew_scales["ang_vel_z"] > 0:
+            ang_vel_error = torch.square(self.commands[:, 1] - base_ang_vel[:, 2])
+            rew_ang_vel_z = torch.exp(-ang_vel_error / 0.25) * self.rew_scales["ang_vel_z"]
+        else:
+            rew_ang_vel_z = torch.square(base_ang_vel[:, 2]) * self.rew_scales["ang_vel_z"]
 
-        rew_ang_vel_z = torch.square(base_ang_vel[:, 2]) * self.rew_scales["ang_vel_z"]
 
         rew_joint_acc = \
             torch.sum(torch.square(self.last_dof_vel - dof_vel), dim=1) * self.rew_scales["joint_acc"]
