@@ -21,12 +21,12 @@ env:
     rot: [0.0, 0.0, 0.0, 1.0] # x,y,z,w [quat]
     vLinear: [0.0, 0.0, 0.0]  # x,y,z [m/s]
     vAngular: [0.0, 0.0, 0.0]  # x,y,z [rad/s]
-    vxLinearRandom: [-10, 10]
-    vzAngularRandom: [-1, 1]
+    vxLinearRandom: [0, 0]
+    vzAngularRandom: [-0.4, 0.4]
   
   randomCommandVelocityRanges:
-    linear_x: [-7., 7.] # min max [m/s]
-    yaw: [-0.2, 0.2]      # min max [rad/s]
+    linear_x: [0., 0.] #[-7., 7.] # min max [m/s]
+    yaw: [-0.4, 0.4]      # min max [rad/s]
   
   control:
     #different action space : 'normal', 'differential', 'variation'
@@ -38,35 +38,16 @@ env:
     # wheelMaxAngularVelocity: 20.0   # [r/s]
     # actionScale: 2
 
-
-
-
-  # defaultJointAngles:  # = target angles when action = 0.0
-  #   LF_HAA: 0.03    # [rad]
-  #   LH_HAA: 0.03    # [rad]
-  #   RF_HAA: -0.03   # [rad]
-  #   RH_HAA: -0.03   # [rad]
-
-  #   LF_HFE: 0.4     # [rad]
-  #   LH_HFE: -0.4    # [rad]
-  #   RF_HFE: 0.4     # [rad]
-  #   RH_HFE: -0.4    # [rad]
-
-  #   LF_KFE: -0.8    # [rad]
-  #   LH_KFE: 0.8     # [rad]
-  #   RF_KFE: -0.8    # [rad]
-  #   RH_KFE: 0.8     # [rad]
-
   learn:
     # rewards
       #linear velocity
-    linearVelocityXRewardScale: 5.0
+    linearVelocityXRewardScale: -1 #5.0
     linearVelocityYRewardScale: -0.1
     linearVelocityZRewardScale: -0.1
       #angular velocity
     angularVelocityXRewardScale: -1.0
     angularVelocityYRewardScale: -1.0
-    angularVelocityZRewardScale: 3.0
+    angularVelocityZRewardScale: 20.0
       #joint position
     jointAccRewardScale: -0.03
     actionRateRewardScale: -0.05

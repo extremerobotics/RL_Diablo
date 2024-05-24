@@ -321,10 +321,11 @@ class ExbotTask(RLTask):
         projected_gravity = quat_rotate(torso_rotation, self.gravity_vec)
 
         # velocity tracking reward
-        lin_vel_error = torch.square(self.commands[:, 0] - base_lin_vel[:, 0])
-        rew_lin_vel_x = torch.exp(-lin_vel_error / 0.25) * self.rew_scales["lin_vel_x"]
-
-       
+        if self.rew_scales["lin_vel_x"] > 0:
+            lin_vel_error = torch.square(self.commands[:, 0] - base_lin_vel[:, 0])
+            rew_lin_vel_x = torch.exp(-lin_vel_error / 0.25) * self.rew_scales["lin_vel_x"]
+        else:
+            rew_lin_vel_x = torch.square(base_lin_vel[:, 0]) * self.rew_scales["lin_vel_x"]
         rew_lin_vel_y = torch.square(base_lin_vel[:, 1]) * self.rew_scales["lin_vel_y"]
         rew_lin_vel_z = torch.square(base_lin_vel[:, 2]) * self.rew_scales["lin_vel_z"]
         rew_ang_vel_x = torch.square(base_ang_vel[:, 0]) * self.rew_scales["ang_vel_x"]
