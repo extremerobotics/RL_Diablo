@@ -31,6 +31,7 @@ import math
 
 import numpy as np
 import torch
+from collections import deque
 from omni.isaac.core.articulations import ArticulationView
 from omni.isaac.core.utils.prims import get_prim_at_path
 from omni.isaac.core.utils.torch.rotations import *
@@ -44,10 +45,16 @@ class ExbotTask(RLTask):
         self.update_config(sim_config)
         self._max_episode_length = 500
 
-        self._num_observations = 15
+        nb_observations = 15
+        nb_past_observations = 10
+
+        self._num_observations = nb_observations*nb_past_observations
         self._num_actions = 2
 
         RLTask.__init__(self, name, env)
+
+        self.obs_que = deque([torch.zeros(self._num_envs, nb_observations, dtype=torch.float, device=self._device)]*nb_past_observations, maxlen=nb_past_observations)
+
         return
 
     def update_config(self, sim_config):
@@ -192,12 +199,14 @@ class ExbotTask(RLTask):
             dim=-1,
         )
 
+        self.obs_que.appendleft(obs)
+
 
         # print("obs = ", obs)
         # print("dof_vel = ", dof_vel)
         # print("actions = ", self.actions* self.action_scale)
 
-        self.obs_buf[:] = obs
+        self.obs_buf[:] = torch.cat(list(self.obs_que), dim=1)
 
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
@@ -220,12 +229,14 @@ class ExbotTask(RLTask):
             return
         elif self.action_space_mode == "normal":
             self.current_targets[:] = self.action_scale * self.actions[:, 0:2]
+
         elif self.action_space_mode == "differential":
             self.current_targets[:] = \
                 self.action_scale * torch.mul( self.actions[:, 0].view(self._num_envs, 1),\
                                             torch.tensor([1.0, 1.0], device=self._device).repeat((self._num_envs, 1)) )+ \
                 self.action_scale * torch.mul(self.actions[:, 1].view(self._num_envs, 1),\
                                             torch.tensor([1.0, -1.0], device=self._device).repeat((self._num_envs, 1)) )
+            
         elif self.action_space_mode == "variation":
             self.current_targets[:] = torch.clamp(torch.mul(self.actions * self.action_scale, self.current_targets),\
                                                   -self.wheel_max_angular_velocity, self.wheel_max_angular_velocity )
@@ -299,6 +310,8 @@ class ExbotTask(RLTask):
         self.last_actions = torch.zeros(
             self._num_envs, self.num_actions, dtype=torch.float, device=self._device, requires_grad=False
         )
+
+
 
         self.time_out_buf = torch.zeros_like(self.reset_buf)
 
