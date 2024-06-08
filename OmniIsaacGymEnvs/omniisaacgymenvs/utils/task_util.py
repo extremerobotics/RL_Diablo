@@ -47,7 +47,6 @@ def import_tasks():
     from omniisaacgymenvs.tasks.shadow_hand import ShadowHandTask
 
     # from omniisaacgymenvs.tasks.diablo import DiabloTask
-    from omniisaacgymenvs.tasks.exbot import ExbotLocomotionTask
     from omniisaacgymenvs.tasks.exbot1 import ExbotTask
 
     from omniisaacgymenvs.tasks.warp.ant import AntLocomotionTask as AntLocomotionTaskWarp

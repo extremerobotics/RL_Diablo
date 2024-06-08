@@ -90,7 +90,7 @@ class ExbotDemo(ExbotTask):
         self._keyboard = omni.appwindow.get_default_app_window().get_keyboard()
         self._sub_keyboard = self._input.subscribe_to_keyboard_events(self._keyboard, self._on_keyboard_event)
         T = 4
-        R = 2
+        R = 0.15
         self._key_to_control = {
             "UP": [T, 0.0],
             "DOWN": [-T, 0.0],

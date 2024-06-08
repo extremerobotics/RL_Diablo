@@ -21,12 +21,12 @@ env:
     rot: [0.0, 0.0, 0.0, 1.0] # x,y,z,w [quat]
     vLinear: [0.0, 0.0, 0.0]  # x,y,z [m/s]
     vAngular: [0.0, 0.0, 0.0]  # x,y,z [rad/s]
-    vxLinearRandom: [0, 0] #[-7, 7]
-    vzAngularRandom: [-5, 5]
+    vxLinearRandom: [-5, 5]
+    vzAngularRandom: [-0.2, 0.2]
   
   randomCommandVelocityRanges:
     linear_x: [-5., 5.] # min max [m/s]
-    yaw: [-3., 3.]      # min max [rad/s]
+    yaw: [-0.2, 0.2]      # min max [rad/s]
   
   control:
     #different action space : 'normal', 'differential', 'variation'
@@ -56,7 +56,7 @@ env:
 
     # normalization
     linearVelocityScale: 0.1    # max_speed = 10 m/s clip between -1 and 1
-    angularVelocityScale: 0.08  # max_angular_speed = 12.5 rad/s clip between -1 and 1
+    angularVelocityScale: 1.5 #0.08  # max_angular_speed = 12.5 rad/s clip between -1 and 1
     dofPositionScale: 1.0
     dofVelocityScale: 0.04
 
